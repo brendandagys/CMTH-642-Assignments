@@ -1,0 +1,185 @@
+---
+title: "CMTH 642 - Assignment 2"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# USDA Clean Data
+
+We uplodaded the clean csv file generated from Assignment 1 (USDA_Clean.csv).
+Please download and load it to your workspace.
+
+```{r}
+loc = getwd()
+USDAclean = read.csv(paste(loc, "USDA_Clean.csv", sep = "/"))
+attach(USDAclean) # Optional
+# attach() function helps you to access USDA_Clean without the need of mentioning it.
+# For example, you can use Calories instead of USDA_Clean$Calories
+#View(USDA_Clean)
+#str(USDAclean)
+```
+
+# Visualization of Feature Relationships
+
+We have used a function panel.cor() inside pair() to show the correlations among different features. The only line you should complete is the line that you assign a value to **USDA_Selected_Features**. Research how can you select multiple columns from a dataframe to use it inside pair() function. 
+
+A) Show the relationship among *Calories*, *Carbohydrate*, *Protein*, *Total Fat* and *Sodium*. **(5 p)**
+
+B) Describe the correlations among **Calories**  and other features. **(5 p)**
+
+Hint: We usually interpret the absolute value of correlation as follows:
+
+.00-.19 *very weak*
+.20-.39 *weak*
+.40-.59 *moderate*
+.60-.79 *strong*
+.80-1.0 *very strong*
+
+```{r}
+panel.cor <- function(x, y, digits=2, prefix="", cex.cor) 
+{
+    usr <- par("usr"); on.exit(par(usr)) 
+    par(usr = c(0, 1, 0, 1)) 
+    r <- abs(cor(x, y)) 
+    txt <- format(c(r, 0.123456789), digits=digits)[1] 
+    txt <- paste(prefix, txt, sep="") 
+    if(missing(cex.cor)) cex <- 0.8/strwidth(txt) 
+ 
+    test <- cor.test(x,y) 
+    # borrowed from printCoefmat
+    Signif <- symnum(test$p.value, corr = FALSE, na = FALSE, 
+                  cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                  symbols = c("***", "**", "*", ".", " ")) 
+ 
+    text(0.5, 0.5, txt, cex = cex * r) 
+    text(.8, .8, Signif, cex=cex, col=2) 
+}
+
+# Assign a value USDA_Selected_Features that represents
+# "Calories","Carbohydrate","Protein","TotalFat", "Sodium" columns
+###################################################
+# Complete code here and uncomment it
+USDA_Selected_Features <- USDAclean[, c('Calories', 'Carbohydrate', 'Protein', 'TotalFat', 'Sodium')]
+###################################################
+
+# Uncomment the following line when you assign USDA_Selected_Featuers to show the results
+pairs(USDA_Selected_Features, lower.panel = panel.smooth, upper.panel = panel.cor)
+
+# Explain what you can conclude from this visualization as a comment here
+
+# We can tell that all attributes are highly correlated (due to the plots and the presence of three astericks), with the exception of sodium with all other features.
+```
+
+## Regression Model on USDA Clean Data
+Create a Linear Regression Model (lm), using **Calories** as the dependent variable, and *Carbohydrate*, *Protein*, *Total Fat* and *Sodium* as independent variables. **(10 p)**
+```{r}
+model = lm(Calories ~ Carbohydrate + Protein + TotalFat + Sodium)
+```
+
+## Analyzing Regression Model
+A) In the above example, which independent feature is less significant? (Hint: Use ANOVA) **(5 p)**
+
+```{r}
+modelaov = anova(model)
+modelaov
+
+# The Sodium feature is less significant. We can deduce this from the Analysis of Variance Table. The p-value for sodium is 0.1387, which is not very significant, especially compared to the p-values of the other features, which are all much smaller and less than 2e-16.
+```
+B) Which independent variable has the strongest positive predictive power in the model? (Hint: Look at the coefficients calculated for each independent variable) **(5 p)**
+```{r}
+coef(model)
+
+# The independent variable \'TotalFat\' has the strongest positive predictive power in the model, due to it having the largest coefficient: 8.78.
+```
+
+## Calories Prediction
+A new product is just produced with the following data:
+
+"Protein"	"TotalFat"	"Carbohydrate"	"Sodium"	"Cholesterol"
+
+0.1       40        425             430       75 
+
+"Sugar"	"Calcium"	"Iron"	"Potassium"	"VitaminC"	"VitaminE"	"VitaminD"
+
+NA      42        NA      35			    10			    0.0			    NA
+
+A) Based on the model you created, what is the predicted value for **Calories** ? **(5 p)**
+
+B) If the *Sodium* amount increases 101 times from 430 to 43430 (10000% increase), how much change will occur on Calories in percent? Can you explain why? **(5 p)**
+
+```{r}
+newrecord = data.frame(Carbohydrate = 425, Protein = 0.1, TotalFat = 40, Sodium = 430)
+cat("Predicted value for calories is:", predict(model, newrecord))
+
+# If the value of Sodium increased 101 times from 430 to 43430, the value for Calories would change by 13.97226. This represents a 0.72% change in the value for Calories from when Sodium was equal to 430. To get this result we multiply the difference in the Sodium value from before to after (43430 - 430 = 43000) by the coefficient for Sodium from the model, which is 0.0003249363. We use this value in our regression calculation. The coefficient describes the change in the dependent variable for each unit of change in the Sodium variable.
+```
+
+# Wilcoxon Tests
+
+## Research Question: Does illustrations improve memorization? 
+A study of primary education asked elementary school students to retell two book articles that they read earlier in the week. The first (Article 1) had no picutres, and the second (Article 2) illustrated with pictures. An expert listened
+to recordings of the students retelling each article and assigned a score for
+certain uses of language. Higher scores are better. Here are the data for five readers in a this study:
+
+Student     1     2     3     4     5
+
+Article 1   0.40  0.72  0.00  0.36  0.55
+
+Article 2   0.77  0.49  0.66  0.28  0.38
+
+We wonder if illustrations improve how the students retell an article. 
+
+### What is $H_0$ and $H_a$ ? 
+
+**(10 p)**
+
+```{r}
+# H_0: The two population distributions are the same / the mean of the scores of the students from both groups are equal.
+# H_a: The two populations are different / The mean of the scores of the students from both groups are not equal.
+```
+
+### Paired or Independent design?
+
+Based on your answer, which Wilcoxon test should you use? **(5 p)**
+```{r}
+# The test should not be paired; two different articles are being compared. We should use the Mann-Whitney rank sum test.
+```
+
+### Will you accept or reject your Null Hypothesis? ($\alpha = 0.05$)
+Do illustrations improve how the students retell an article or not? **(5 p)**
+
+```{r}
+article1 = c(0.40, 0.72, 0, 0.36, 0.55)
+article2 = c(0.77, 0.49, 0.66, 0.28, 0.38)
+wilcox.test(article1, article2, paired = 0)
+
+# Illustrations do not improve how well the students retell an article. We can discern this from the fact that the p-value for the Rank Sum test is 0.6905, which is much greater than the confidence level of 0.05.
+```
+ 
+# Correlation
+Plot and see the relationship between "cylinder" (cyl) and "weight" (wt) of the cars from mtcars dataset. 
+A) Can you see any patterns of correlation between these two variable? **(5 p)**
+
+```{r}
+with(mtcars, plot(cyl, wt))
+# A pattern that can be observed is that as the number of cylinders increases, the weight increases.
+```
+
+B) What is the best description for "cyl" and "wt" variables? (Ratio, Ordinal, Interval, or Categorical) **(5 p)**
+
+```{r}
+# 'cyl' is an ordinal variable.
+# 'wt' is a ratio variable.
+```
+
+C) Based on the description of the "cyl" and "wt" variables, should you use "Pearson" or "Spearman" correlation? Find the correlation between these two variables. **(10 p)**
+
+```{r}
+# Because 'cyl' is an ordinal variable, it is not necessarily normally distributed. Because of this, we should use Spearman correlation.
+cor(mtcars$cyl, mtcars$wt, method = "spearman")
+```
